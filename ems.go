@@ -112,7 +112,7 @@ func DestroyMsg(msg TibEMSMsg) error {
 	return nil
 }
 
-func GetMsgType(msg TibEMSMsg) (TibEMSMsgType, error) {
+func getMsgType(msg TibEMSMsg) (TibEMSMsgType, error) {
 	var msgType C.tibemsMsgType
 	status := C.tibemsMsg_GetBodyType(msg, &msgType)
 	if status != TibEMSOk {
@@ -123,6 +123,15 @@ func GetMsgType(msg TibEMSMsg) (TibEMSMsgType, error) {
 }
 
 func GetMsgText(msg TibEMSMsg) (string, error) {
+	msgType, err := getMsgType(msg)
+	if err != nil {
+		return "", err
+	}
+
+	if C.tibemsMsgType(msgType) != TibEMSTextMessage {
+		return "", errors.New("unsupported message type")
+	}
+
 	const numOfChars = 32768
 
 	var buf *C.char = (*C.char)(C.calloc(numOfChars, 1))
