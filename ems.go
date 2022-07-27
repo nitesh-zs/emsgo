@@ -143,10 +143,6 @@ func GetMsgText(msg TibEMSMsg) (string, error) {
 		return "", errors.New("error in getting message text")
 	}
 
-	if msg == nil {
-		return NilMsg, nil
-	}
-
 	return C.GoString(buf), nil
 }
 
@@ -156,6 +152,11 @@ func ReceiveMsg(msgConsumer TibEMSConsumer) (TibEMSMsg, error) {
 	status := C.tibemsMsgConsumer_Receive(C.tibemsMsgConsumer(msgConsumer), &msg)
 	if status != TibEMSOk {
 		return TibEMSMsg(msg), errors.New("error in receiving message")
+	}
+
+	// return special message in case nil message is received
+	if msg == nil {
+		return NilMsg, nil
 	}
 
 	return TibEMSMsg(msg), nil
