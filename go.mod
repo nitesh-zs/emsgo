@@ -1,3 +1,3 @@
-module github.com/nitesh-zs/go-ems
+module github.com/nitesh-zs/emsgo
 
 go 1.17
