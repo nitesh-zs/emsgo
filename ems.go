@@ -21,20 +21,13 @@ type TibEMSConsumer C.tibemsMsgConsumer
 type TibEMSMsg C.tibemsMsg
 type TibEMSMsgType C.tibemsMsgType
 
-var errorContext C.tibemsErrorContext
-
-func init() {
-	// initialize the error context
-	_ = C.tibemsErrorContext_Create(&errorContext)
-}
-
 func CreateConnFactory() TibEMSConnFactory {
-	var cf TibEMSConnFactory = C.tibemsConnectionFactory_Create()
-	return cf
+	cf := C.tibemsConnectionFactory_Create()
+	return TibEMSConnFactory(cf)
 }
 
 func SetServerURL(factory TibEMSConnFactory, url string) error {
-	status := C.tibemsConnectionFactory_SetServerURL(factory, C.CString(url))
+	status := C.tibemsConnectionFactory_SetServerURL(C.tibemsConnectionFactory(factory), C.CString(url))
 	if status != TibEMSOk {
 		return errors.New("error in setting server URL")
 	}
@@ -42,17 +35,18 @@ func SetServerURL(factory TibEMSConnFactory, url string) error {
 	return nil
 }
 
-func CreateConnection(cf TibEMSConnFactory, conn TibEMSConnection, user, password string) error {
-	status := C.tibemsConnectionFactory_CreateConnection(cf, &conn, C.CString(user), C.CString(password))
+func CreateConnection(cf TibEMSConnFactory, user, password string) (TibEMSConnection, error) {
+	var conn C.tibemsConnection
+	status := C.tibemsConnectionFactory_CreateConnection(C.tibemsConnectionFactory(cf), &conn, C.CString(user), C.CString(password))
 	if status != TibEMSOk {
-		return errors.New("error in creating connection")
+		return TibEMSConnection(conn), errors.New("error in creating connection")
 	}
 
-	return nil
+	return TibEMSConnection(conn), nil
 }
 
 func StartConnection(conn TibEMSConnection) error {
-	status := C.tibemsConnection_Start(conn)
+	status := C.tibemsConnection_Start(C.tibemsConnection(conn))
 	if status != TibEMSOk {
 		return errors.New("error in starting connection")
 	}
@@ -61,7 +55,7 @@ func StartConnection(conn TibEMSConnection) error {
 }
 
 func StopConnection(conn TibEMSConnection) error {
-	status := C.tibemsConnection_Stop(conn)
+	status := C.tibemsConnection_Stop(C.tibemsConnection(conn))
 	if status != TibEMSOk {
 		return errors.New("error in stopping connection")
 	}
@@ -70,7 +64,7 @@ func StopConnection(conn TibEMSConnection) error {
 }
 
 func CloseConnection(conn TibEMSConnection) error {
-	status := C.tibemsConnection_Close(conn)
+	status := C.tibemsConnection_Close(C.tibemsConnection(conn))
 	if status != TibEMSOk {
 		return errors.New("error in closing connection")
 	}
@@ -80,37 +74,37 @@ func CloseConnection(conn TibEMSConnection) error {
 
 func CreateDestination(destType TibEMSDestinationType, destination string) (TibEMSDestination, error) {
 	var dest C.tibemsDestination
-	status := C.tibemsDestination_Create(&dest, destType, C.CString(destination))
+	status := C.tibemsDestination_Create(&dest, C.tibemsDestinationType(destType), C.CString(destination))
 	if status != TibEMSOk {
-		return dest, errors.New("error in creating destination")
+		return TibEMSDestination(dest), errors.New("error in creating destination")
 	}
 
-	return dest, nil
+	return TibEMSDestination(dest), nil
 
 }
 
 func CreateSession(conn TibEMSConnection) (TibEMSSession, error) {
-	var session TibEMSSession
-	status := C.tibemsConnection_CreateSession(conn, &session, TibEMSFalse, TibEMSExplicitClientAcknowledge)
+	var session C.tibemsSession
+	status := C.tibemsConnection_CreateSession(C.tibemsConnection(conn), &session, TibEMSFalse, TibEMSExplicitClientAcknowledge)
 	if status != TibEMSOk {
-		return session, errors.New("error in creating session")
+		return TibEMSSession(session), errors.New("error in creating session")
 	}
 
-	return session, nil
+	return TibEMSSession(session), nil
 }
 
 func CreateConsumer(session TibEMSSession, dest TibEMSDestination) (TibEMSConsumer, error) {
-	var msgConsumer TibEMSConsumer
-	status := C.tibemsSession_CreateConsumer(session, &msgConsumer, dest, nil, TibEMSFalse)
+	var msgConsumer C.tibemsMsgConsumer
+	status := C.tibemsSession_CreateConsumer(C.tibemsSession(session), &msgConsumer, C.tibemsDestination(dest), nil, TibEMSFalse)
 	if status != TibEMSOk {
-		return msgConsumer, errors.New("error in creating consumer")
+		return TibEMSConsumer(msgConsumer), errors.New("error in creating consumer")
 	}
 
-	return msgConsumer, nil
+	return TibEMSConsumer(msgConsumer), nil
 }
 
 func DestroyMsg(msg TibEMSMsg) error {
-	status := C.tibemsMsg_Destroy(msg)
+	status := C.tibemsMsg_Destroy(C.tibemsMsg(msg))
 	if status != TibEMSOk {
 		return errors.New("error in destroying message")
 	}
@@ -119,13 +113,13 @@ func DestroyMsg(msg TibEMSMsg) error {
 }
 
 func GetMsgType(msg TibEMSMsg) (TibEMSMsgType, error) {
-	var msgType TibEMSMsgType
+	var msgType C.tibemsMsgType
 	status := C.tibemsMsg_GetBodyType(msg, &msgType)
 	if status != TibEMSOk {
-		return msgType, errors.New("error in getting message type")
+		return TibEMSMsgType(msgType), errors.New("error in getting message type")
 	}
 
-	return msgType, nil
+	return TibEMSMsgType(msgType), nil
 }
 
 func GetMsgText(msg TibEMSMsg) (string, error) {
@@ -135,7 +129,7 @@ func GetMsgText(msg TibEMSMsg) (string, error) {
 
 	defer C.free(unsafe.Pointer(buf))
 
-	status := C.tibemsTextMsg_GetText(msg, &buf)
+	status := C.tibemsTextMsg_GetText(C.tibemsMsg(msg), &buf)
 	if status != TibEMSOk {
 		return "", errors.New("error in getting message text")
 	}
@@ -144,18 +138,18 @@ func GetMsgText(msg TibEMSMsg) (string, error) {
 }
 
 func ReceiveMsg(msgConsumer TibEMSConsumer) (TibEMSMsg, error) {
-	var msg TibEMSMsg
+	var msg C.tibemsMsg
 
-	status := C.tibemsMsgConsumer_Receive(msgConsumer, &msg)
+	status := C.tibemsMsgConsumer_Receive(C.tibemsMsgConsumer(msgConsumer), &msg)
 	if status != TibEMSOk {
-		return msg, errors.New("error in receiving message")
+		return TibEMSMsg(msg), errors.New("error in receiving message")
 	}
 
-	return msg, nil
+	return TibEMSMsg(msg), nil
 }
 
 func DestroyDestination(dest TibEMSDestination) error {
-	status := C.tibemsDestination_Destroy(dest)
+	status := C.tibemsDestination_Destroy(C.tibemsDestination(dest))
 	if status != TibEMSOk {
 		return errors.New("error in destroying destination")
 	}
@@ -164,7 +158,7 @@ func DestroyDestination(dest TibEMSDestination) error {
 }
 
 func CloseSession(session TibEMSSession) error {
-	status := C.tibemsSession_Close(session)
+	status := C.tibemsSession_Close(C.tibemsSession(session))
 	if status != TibEMSOk {
 		return errors.New("error in closing session")
 	}
@@ -173,7 +167,7 @@ func CloseSession(session TibEMSSession) error {
 }
 
 func AcknowledgeMsg(msg TibEMSMsg) error {
-	status := C.tibemsMsg_Acknowledge(msg)
+	status := C.tibemsMsg_Acknowledge(C.tibemsMsg(msg))
 	if status != TibEMSOk {
 		return errors.New("error in acknowledging message")
 	}
