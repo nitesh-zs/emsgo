@@ -156,7 +156,7 @@ func ReceiveMsg(msgConsumer TibEMSConsumer) (TibEMSMsg, error) {
 
 	// return special message in case nil message is received
 	if msg == nil {
-		return NilMsg, nil
+		return "", errors.New("nil msg received")
 	}
 
 	return TibEMSMsg(msg), nil
