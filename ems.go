@@ -143,6 +143,10 @@ func GetMsgText(msg TibEMSMsg) (string, error) {
 		return "", errors.New("error in getting message text")
 	}
 
+	if msg == nil {
+		return NilMsg, nil
+	}
+
 	return C.GoString(buf), nil
 }
 

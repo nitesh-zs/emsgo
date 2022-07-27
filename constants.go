@@ -7,4 +7,5 @@ const (
 	TibEMSExplicitClientAcknowledge = 23
 	TibEMSFalse                     = 0
 	TibEMSTextMessage               = 6
+	NilMsg                          = "NULL"
 )
